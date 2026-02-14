@@ -1,4 +1,12 @@
-import { APP_CONFIG, RELATIONSHIP_DATE, formatDateDisplay } from "./config.js";
+import {
+  APP_CONFIG,
+  RELATIONSHIP_DATE,
+  PASSWORD_HINTS,
+  LETTER_LINES,
+  TIMELINE_ITEMS,
+  MUSIC_CONFIG,
+  formatDateDisplay
+} from "./config.js";
 import { initGallery } from "./gallery.js";
 
 function addYearsClamped(date, years) {
@@ -138,9 +146,23 @@ function initValentinePage() {
   const unlockBtn = document.getElementById("unlockBtn");
   const gateError = document.getElementById("gateError");
   const cooldownText = document.getElementById("cooldownText");
+  const hintText = document.getElementById("hintText");
   const mainContent = document.getElementById("mainContent");
   const sinceDate = document.getElementById("sinceDate");
   const togetherFor = document.getElementById("togetherFor");
+  const nextAnniversary = document.getElementById("nextAnniversary");
+  const nextMilestone = document.getElementById("nextMilestone");
+  const timelineList = document.getElementById("timelineList");
+  const letterText = document.getElementById("letterText");
+  const petals = document.getElementById("unlockPetals");
+
+  const musicAudio = document.getElementById("bgMusic");
+  const musicToggle = document.getElementById("musicToggle");
+  const musicVolume = document.getElementById("musicVolume");
+  const musicStatus = document.getElementById("musicStatus");
+  const musicConsent = document.getElementById("musicConsent");
+  const musicConsentYes = document.getElementById("musicConsentYes");
+  const musicConsentNo = document.getElementById("musicConsentNo");
 
   const required = [
     gateScreen,
@@ -170,7 +192,10 @@ function initValentinePage() {
     lockUntil: 0,
     cooldownIntervalId: null,
     unlocked: false,
-    togetherIntervalId: null
+    togetherIntervalId: null,
+    galleryApi: null,
+    letterTimer: null,
+    letterStarted: false
   };
 
   const pad2 = (n) => String(n).padStart(2, "0");
@@ -242,6 +267,18 @@ function initValentinePage() {
     gateError.textContent = "";
     gateError.classList.add("hidden");
     datePasswordInput.setAttribute("aria-invalid", "false");
+  }
+
+  function clearHint() {
+    if (!hintText) return;
+    hintText.textContent = "";
+    hintText.classList.add("hidden");
+  }
+
+  function setHint(message) {
+    if (!hintText || !message) return;
+    hintText.textContent = message;
+    hintText.classList.remove("hidden");
   }
 
   function triggerShake() {
@@ -346,6 +383,11 @@ function initValentinePage() {
   function registerFailure(message) {
     state.failedAttempts += 1;
 
+    const hintIndex = Math.min(state.failedAttempts - 1, PASSWORD_HINTS.length - 1);
+    if (hintIndex >= 0) {
+      setHint(PASSWORD_HINTS[hintIndex]);
+    }
+
     const attemptsLeft = APP_CONFIG.maxAttemptsBeforeCooldown - state.failedAttempts;
     if (attemptsLeft <= 0) {
       state.failedAttempts = 0;
@@ -362,12 +404,43 @@ function initValentinePage() {
     triggerShake();
   }
 
-  function startTogetherTicker() {
-    if (!togetherFor) return;
+  function formatNextAnniversaryText(now) {
+    let next = new Date(
+      now.getFullYear(),
+      relationshipStart.getMonth(),
+      relationshipStart.getDate(),
+      relationshipStart.getHours(),
+      relationshipStart.getMinutes(),
+      relationshipStart.getSeconds(),
+      0
+    );
 
+    if (next <= now) {
+      next = addYearsClamped(next, 1);
+    }
+
+    const ms = Math.max(0, next.getTime() - now.getTime());
+    const totalHours = Math.ceil(ms / (60 * 60 * 1000));
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    return `${days} day${days === 1 ? "" : "s"} ${hours} hour${hours === 1 ? "" : "s"}`;
+  }
+
+  function formatMilestoneText(now) {
+    const diffMs = Math.max(0, now.getTime() - relationshipStart.getTime());
+    const totalDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    const nextTarget = Math.ceil((totalDays + 1) / 100) * 100;
+    const daysLeft = Math.max(1, nextTarget - totalDays);
+    return `${nextTarget}-day mark in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
+  }
+
+  function startTogetherTicker() {
     const render = () => {
-      const parts = calculateCalendarDuration(relationshipStart, new Date());
-      togetherFor.textContent = formatTogetherFor(parts);
+      const now = new Date();
+      const parts = calculateCalendarDuration(relationshipStart, now);
+      if (togetherFor) togetherFor.textContent = formatTogetherFor(parts);
+      if (nextAnniversary) nextAnniversary.textContent = formatNextAnniversaryText(now);
+      if (nextMilestone) nextMilestone.textContent = formatMilestoneText(now);
     };
 
     render();
@@ -378,21 +451,210 @@ function initValentinePage() {
     state.togetherIntervalId = setInterval(render, 1000);
   }
 
+  function renderTimeline() {
+    if (!timelineList) return;
+
+    if (!Array.isArray(TIMELINE_ITEMS) || TIMELINE_ITEMS.length === 0) {
+      timelineList.innerHTML = "";
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    TIMELINE_ITEMS.forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "timeline-card rounded-2xl border border-[#0e5c06]/30 bg-[#1f0000]/20 p-4 md:p-5";
+
+      const date = document.createElement("p");
+      date.className = "text-xs uppercase tracking-[0.18em] text-emerald-300";
+      date.textContent = item.date || "";
+
+      const title = document.createElement("h4");
+      title.className = "mt-2 text-lg font-semibold text-white";
+      title.textContent = item.title || "Memory";
+
+      const text = document.createElement("p");
+      text.className = "mt-2 text-sm text-zinc-300 md:text-base";
+      text.textContent = item.text || "";
+
+      card.appendChild(date);
+      card.appendChild(title);
+      card.appendChild(text);
+      fragment.appendChild(card);
+    });
+
+    timelineList.replaceChildren(fragment);
+  }
+
+  function startLetterTyping() {
+    if (!letterText || state.letterStarted) return;
+    state.letterStarted = true;
+
+    const fullText = Array.isArray(LETTER_LINES) ? LETTER_LINES.join("\n") : "";
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (reduceMotion) {
+      letterText.textContent = fullText;
+      letterText.classList.add("is-complete");
+      return;
+    }
+
+    let index = 0;
+    letterText.textContent = "";
+
+    state.letterTimer = setInterval(() => {
+      index += 1;
+      letterText.textContent = fullText.slice(0, index);
+      if (index >= fullText.length) {
+        clearInterval(state.letterTimer);
+        state.letterTimer = null;
+        letterText.classList.add("is-complete");
+      }
+    }, 22);
+  }
+
+  function burstUnlockPetals() {
+    if (!petals) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    petals.innerHTML = "";
+
+    const count = 34;
+    for (let i = 0; i < count; i += 1) {
+      const node = document.createElement("span");
+      node.className = "unlock-petal";
+      node.textContent = i % 6 === 0 ? "❀" : "❤";
+      node.style.left = `${Math.random() * 100}%`;
+      node.style.setProperty("--dur", `${2.2 + Math.random() * 1.4}s`);
+      node.style.setProperty("--delay", `${Math.random() * 0.35}s`);
+      node.style.setProperty("--drift", `${-28 + Math.random() * 56}px`);
+      petals.appendChild(node);
+    }
+
+    setTimeout(() => {
+      petals.innerHTML = "";
+    }, 4200);
+  }
+
+  function initMusic() {
+    if (!musicAudio || !musicToggle || !musicVolume || !musicStatus || !musicConsent || !musicConsentYes || !musicConsentNo) {
+      return;
+    }
+
+    musicAudio.src = MUSIC_CONFIG.src;
+
+    const storedVolume = Number(safeStorageGet(localStorage, APP_CONFIG.musicVolumeStorageKey));
+    const initialVolume = Number.isFinite(storedVolume)
+      ? Math.max(0, Math.min(1, storedVolume))
+      : MUSIC_CONFIG.defaultVolume;
+
+    musicAudio.volume = initialVolume;
+    musicVolume.value = String(initialVolume);
+
+    const setMusicStatus = (text) => {
+      musicStatus.textContent = text;
+    };
+
+    const syncMusicButton = () => {
+      musicToggle.textContent = musicAudio.paused ? "Play" : "Pause";
+    };
+
+    const playMusic = async (isAuto = false) => {
+      try {
+        await musicAudio.play();
+        syncMusicButton();
+        setMusicStatus("Playing in background.");
+      } catch {
+        syncMusicButton();
+        setMusicStatus(isAuto ? "Tap Play to start music." : "Could not start playback automatically.");
+      }
+    };
+
+    const pauseMusic = () => {
+      musicAudio.pause();
+      syncMusicButton();
+      setMusicStatus("Music is paused.");
+    };
+
+    musicToggle.addEventListener("click", async () => {
+      if (musicAudio.paused) {
+        await playMusic(false);
+        return;
+      }
+      pauseMusic();
+    });
+
+    musicVolume.addEventListener("input", () => {
+      const next = Number(musicVolume.value);
+      musicAudio.volume = Number.isFinite(next) ? Math.max(0, Math.min(1, next)) : MUSIC_CONFIG.defaultVolume;
+      safeStorageSet(localStorage, APP_CONFIG.musicVolumeStorageKey, String(musicAudio.volume));
+    });
+
+    musicAudio.addEventListener("play", syncMusicButton);
+    musicAudio.addEventListener("pause", syncMusicButton);
+
+    const consent = safeStorageGet(localStorage, APP_CONFIG.musicConsentStorageKey);
+
+    if (consent === "yes") {
+      musicConsent.classList.add("hidden");
+      if (MUSIC_CONFIG.autoplayAfterConsent) {
+        playMusic(true);
+      }
+      return;
+    }
+
+    if (consent === "no") {
+      musicConsent.classList.add("hidden");
+      setMusicStatus("Music is paused.");
+      return;
+    }
+
+    musicConsent.classList.remove("hidden");
+
+    musicConsentYes.addEventListener("click", async () => {
+      safeStorageSet(localStorage, APP_CONFIG.musicConsentStorageKey, "yes");
+      musicConsent.classList.add("hidden");
+      await playMusic(true);
+    });
+
+    musicConsentNo.addEventListener("click", () => {
+      safeStorageSet(localStorage, APP_CONFIG.musicConsentStorageKey, "no");
+      musicConsent.classList.add("hidden");
+      pauseMusic();
+    });
+  }
+
+  function ensureGalleryInitialized() {
+    if (!state.galleryApi) {
+      state.galleryApi = initGallery();
+    }
+    if (state.galleryApi && typeof state.galleryApi.syncHash === "function") {
+      state.galleryApi.syncHash();
+    }
+  }
+
   function revealMainContent({ instant = false } = {}) {
     state.unlocked = true;
     clearError();
+    clearHint();
     stopCooldownTicker();
     cooldownText.classList.add("hidden");
     startTogetherTicker();
+    renderTimeline();
+    startLetterTyping();
+    initMusic();
 
     if (APP_CONFIG.rememberUnlockInSession) {
       safeStorageSet(sessionStorage, APP_CONFIG.unlockSessionStorageKey, "1");
     }
 
+    burstUnlockPetals();
+
     if (instant) {
       gateScreen.classList.add("hidden");
       mainContent.classList.remove("hidden", "opacity-0");
       mainContent.classList.add("unlock-in");
+      ensureGalleryInitialized();
       return;
     }
 
@@ -405,6 +667,7 @@ function initValentinePage() {
         mainContent.classList.remove("opacity-0");
         mainContent.classList.add("unlock-in");
       });
+      ensureGalleryInitialized();
     }, 460);
   }
 
@@ -423,7 +686,7 @@ function initValentinePage() {
 
     if (!parsed.ok) {
       if (parsed.reason === "format") {
-        registerFailure("Use DDMMYY or DDMMYYYY (separators/spaces are allowed).");
+        registerFailure("Day month year.");
       } else {
         registerFailure("That is not a valid calendar date.");
       }
@@ -431,7 +694,7 @@ function initValentinePage() {
     }
 
     if (!matchesRelationshipDate(parsed.value)) {
-      registerFailure("That date is not the right one.");
+      registerFailure("WRONGGG.");
       return;
     }
 
@@ -447,8 +710,6 @@ function initValentinePage() {
   if (sinceDate) {
     sinceDate.textContent = formatDateDisplay(RELATIONSHIP_DATE);
   }
-
-  initGallery();
 
   readLockState();
   unlockForm.addEventListener("submit", onUnlockSubmit);

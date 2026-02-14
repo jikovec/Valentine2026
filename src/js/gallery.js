@@ -49,30 +49,69 @@ function getPreferredSrc(originalSrc, preferredExt) {
   return replaceExt(originalSrc, preferredExt);
 }
 
+function normalizeTags(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((tag) => String(tag || "").trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function parsePhotoHash(hash, max) {
+  const match = /^#photo-(\d+)$/i.exec(hash || "");
+  if (!match) return null;
+  const oneBased = Number(match[1]);
+  if (!Number.isInteger(oneBased) || oneBased < 1 || oneBased > max) return null;
+  return oneBased - 1;
+}
+
+function writePhotoHash(index) {
+  const hash = `#photo-${index + 1}`;
+  history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+}
+
+function clearHash() {
+  history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+}
+
+function writeAnyHash(hash) {
+  history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+}
+
 export function initGallery({
   gridSelector = "#galleryGrid",
+  filtersSelector = "#galleryFilters",
   modalSelector = "#galleryModal",
   imageSelector = "#modalImage",
   captionSelector = "#modalCaption",
+  metaSelector = "#modalMeta",
   counterSelector = "#modalCounter",
   closeSelector = "#modalClose",
   prevSelector = "#modalPrev",
-  nextSelector = "#modalNext"
+  nextSelector = "#modalNext",
+  enableHashRouting = true
 } = {}) {
   const grid = document.querySelector(gridSelector);
+  const filters = document.querySelector(filtersSelector);
   const modal = document.querySelector(modalSelector);
   const modalImage = document.querySelector(imageSelector);
   const modalCaption = document.querySelector(captionSelector);
+  const modalMeta = document.querySelector(metaSelector);
   const modalCounter = document.querySelector(counterSelector);
   const closeBtn = document.querySelector(closeSelector);
   const prevBtn = document.querySelector(prevSelector);
   const nextBtn = document.querySelector(nextSelector);
 
   if (!grid || !modal || !modalImage || !modalCaption || !modalCounter || !closeBtn || !prevBtn || !nextBtn) {
-    return { open: () => {}, close: () => {}, destroy: () => {} };
+    return { open: () => {}, close: () => {}, destroy: () => {}, syncHash: () => {} };
   }
 
-  const items = Array.isArray(GALLERY_ITEMS) ? GALLERY_ITEMS.filter(Boolean) : [];
+  const items = Array.isArray(GALLERY_ITEMS)
+    ? GALLERY_ITEMS.filter(Boolean).map((item) => ({
+      ...item,
+      tags: normalizeTags(item.tags)
+    }))
+    : [];
+
   const preferredExt = getPreferredExt();
 
   if (items.length === 0) {
@@ -81,13 +120,20 @@ export function initGallery({
         No photos configured yet. Add files to <code>assets/photos</code> and update <code>src/js/config.js</code>.
       </div>
     `;
-    return { open: () => {}, close: () => {}, destroy: () => {} };
+    return { open: () => {}, close: () => {}, destroy: () => {}, syncHash: () => {} };
   }
 
   let currentIndex = 0;
   let isOpen = false;
   let previousFocusedElement = null;
   let closingTimer = null;
+  let activeTag = "all";
+  let filteredIndexes = [];
+  let hashBeforeModal = "";
+
+  const allTags = Array.from(
+    new Set(items.flatMap((item) => item.tags))
+  ).sort();
 
   function loadWithFallback(imgEl, originalSrc, labelForFallback) {
     const preferredSrc = getPreferredSrc(originalSrc, preferredExt);
@@ -125,17 +171,71 @@ export function initGallery({
 
     const overlay = document.createElement("div");
     overlay.className = "pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-2.5";
-    overlay.textContent = item.caption || `Photo ${index + 1}`;
+
+    const caption = document.createElement("p");
+    caption.textContent = item.caption || `Photo ${index + 1}`;
+    caption.className = "line-clamp-2 text-sm text-zinc-200";
+
+    const details = document.createElement("p");
+    details.className = "mt-1 text-[11px] uppercase tracking-[0.2em] text-emerald-300";
+    details.textContent = [item.date || "", item.location || ""].filter(Boolean).join(" • ");
+
+    overlay.appendChild(caption);
+    if (details.textContent) overlay.appendChild(details);
 
     button.appendChild(img);
     button.appendChild(overlay);
     return button;
   }
 
+  function getFilteredIndexes() {
+    if (activeTag === "all") {
+      return items.map((_, index) => index);
+    }
+
+    return items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.tags.includes(activeTag))
+      .map(({ index }) => index);
+  }
+
   function renderGrid() {
+    filteredIndexes = getFilteredIndexes();
+
+    if (filteredIndexes.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-full rounded-2xl border border-[#0e5c06]/30 bg-[#1f0000]/20 p-6 text-center text-zinc-300">
+          No photos for this filter yet.
+        </div>
+      `;
+      return;
+    }
+
     const fragment = document.createDocumentFragment();
-    items.forEach((item, index) => fragment.appendChild(createCard(item, index)));
+    filteredIndexes.forEach((sourceIndex) => {
+      fragment.appendChild(createCard(items[sourceIndex], sourceIndex));
+    });
     grid.replaceChildren(fragment);
+  }
+
+  function renderFilters() {
+    if (!filters) return;
+
+    const tags = ["all", ...allTags];
+    filters.innerHTML = "";
+
+    tags.forEach((tag) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.galleryTag = tag;
+      btn.textContent = tag === "all" ? "All" : tag;
+      btn.className = `tag-filter rounded-full border px-3 py-1.5 text-xs uppercase tracking-[0.18em] transition ${
+        tag === activeTag
+          ? "is-active border-[#0e5c06] bg-[#0e5c06]/30 text-emerald-200"
+          : "border-[#0e5c06]/40 bg-black/30 text-zinc-300 hover:bg-[#1f0000]/50"
+      }`;
+      filters.appendChild(btn);
+    });
   }
 
   function preloadAround(index) {
@@ -158,7 +258,7 @@ export function initGallery({
     });
   }
 
-  function setModalContent(index) {
+  function setModalContent(index, { skipHashWrite = false } = {}) {
     currentIndex = normalizeIndex(index, items.length);
     const item = items[currentIndex];
 
@@ -169,18 +269,33 @@ export function initGallery({
 
     modalCaption.textContent = item.caption || "";
     modalCounter.textContent = `${currentIndex + 1} / ${items.length}`;
+
+    if (modalMeta) {
+      const tags = item.tags.length ? item.tags.join(" · ") : "";
+      modalMeta.textContent = [item.date || "", item.location || "", tags].filter(Boolean).join(" • ");
+      modalMeta.classList.toggle("hidden", !modalMeta.textContent);
+    }
+
+    if (isOpen && enableHashRouting && !skipHashWrite) {
+      writePhotoHash(currentIndex);
+    }
+
     preloadAround(currentIndex);
   }
 
-  function openModal(index) {
-    setModalContent(index);
+  function openModal(index, { fromHash = false } = {}) {
+    setModalContent(index, { skipHashWrite: fromHash });
 
     if (closingTimer) {
       clearTimeout(closingTimer);
       closingTimer = null;
     }
 
-    previousFocusedElement = document.activeElement;
+    if (!isOpen) {
+      hashBeforeModal = /^#photo-\d+$/i.test(window.location.hash) ? "" : window.location.hash;
+      previousFocusedElement = document.activeElement;
+    }
+
     isOpen = true;
     modal.setAttribute("aria-hidden", "false");
     modal.classList.remove("hidden");
@@ -191,6 +306,10 @@ export function initGallery({
       modal.classList.add("opacity-100");
     });
 
+    if (enableHashRouting && !fromHash) {
+      writePhotoHash(currentIndex);
+    }
+
     try {
       closeBtn.focus({ preventScroll: true });
     } catch {
@@ -198,7 +317,7 @@ export function initGallery({
     }
   }
 
-  function closeModal() {
+  function closeModal({ fromHash = false } = {}) {
     if (!isOpen) return;
     isOpen = false;
 
@@ -206,6 +325,14 @@ export function initGallery({
     modal.classList.add("opacity-0");
     modal.setAttribute("aria-hidden", "true");
     unlockPageScroll();
+
+    if (enableHashRouting && !fromHash) {
+      if (hashBeforeModal) {
+        writeAnyHash(hashBeforeModal);
+      } else {
+        clearHash();
+      }
+    }
 
     closingTimer = setTimeout(() => {
       modal.classList.add("hidden");
@@ -229,6 +356,17 @@ export function initGallery({
     openModal(index);
   }
 
+  function onFilterClick(event) {
+    const button = event.target.closest("[data-gallery-tag]");
+    if (!button) return;
+
+    const nextTag = String(button.dataset.galleryTag || "all");
+    if (nextTag === activeTag) return;
+    activeTag = nextTag;
+    renderFilters();
+    renderGrid();
+  }
+
   function onKeyDown(event) {
     if (!isOpen) return;
 
@@ -247,11 +385,11 @@ export function initGallery({
     if (event.key === "ArrowLeft") {
       event.preventDefault();
       setModalContent(currentIndex - 1);
+      return;
     }
 
     if (event.key === "Tab") {
       trapTabKey(event);
-      return;
     }
   }
 
@@ -261,6 +399,55 @@ export function initGallery({
     if (target.hasAttribute("data-modal-close") || target === modal) {
       closeModal();
     }
+  }
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  function onTouchStart(event) {
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+  }
+
+  function onTouchEnd(event) {
+    if (!isOpen) return;
+
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) {
+      return;
+    }
+
+    if (dx < 0) {
+      setModalContent(currentIndex + 1);
+      return;
+    }
+
+    setModalContent(currentIndex - 1);
+  }
+
+  function onHashChange() {
+    if (!enableHashRouting) return;
+
+    const hashIndex = parsePhotoHash(window.location.hash, items.length);
+
+    if (hashIndex == null) {
+      if (isOpen) closeModal({ fromHash: true });
+      return;
+    }
+
+    if (isOpen) {
+      setModalContent(hashIndex, { skipHashWrite: true });
+      return;
+    }
+
+    openModal(hashIndex, { fromHash: true });
   }
 
   function getFocusableInModal() {
@@ -320,28 +507,39 @@ export function initGallery({
     window.scrollTo(0, lockedScrollY);
   }
 
+  const onCloseClick = () => closeModal();
   const onPrevClick = () => setModalContent(currentIndex - 1);
   const onNextClick = () => setModalContent(currentIndex + 1);
 
+  renderFilters();
   renderGrid();
 
   grid.addEventListener("click", onGridClick);
   document.addEventListener("keydown", onKeyDown);
   modal.addEventListener("click", onModalClick);
-  closeBtn.addEventListener("click", closeModal);
+  modal.addEventListener("touchstart", onTouchStart, { passive: true });
+  modal.addEventListener("touchend", onTouchEnd, { passive: true });
+  closeBtn.addEventListener("click", onCloseClick);
   prevBtn.addEventListener("click", onPrevClick);
   nextBtn.addEventListener("click", onNextClick);
+  if (filters) filters.addEventListener("click", onFilterClick);
+  if (enableHashRouting) window.addEventListener("hashchange", onHashChange);
 
   return {
     open: openModal,
     close: closeModal,
+    syncHash: onHashChange,
     destroy() {
       grid.removeEventListener("click", onGridClick);
       document.removeEventListener("keydown", onKeyDown);
       modal.removeEventListener("click", onModalClick);
-      closeBtn.removeEventListener("click", closeModal);
+      modal.removeEventListener("touchstart", onTouchStart);
+      modal.removeEventListener("touchend", onTouchEnd);
+      closeBtn.removeEventListener("click", onCloseClick);
       prevBtn.removeEventListener("click", onPrevClick);
       nextBtn.removeEventListener("click", onNextClick);
+      if (filters) filters.removeEventListener("click", onFilterClick);
+      if (enableHashRouting) window.removeEventListener("hashchange", onHashChange);
     }
   };
 }
