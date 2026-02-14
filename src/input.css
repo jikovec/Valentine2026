@@ -188,7 +188,14 @@ textarea {
   #modalNext {
     width: 2.5rem;
     height: 2.5rem;
-    font-size: 1.5rem;
+
+    min-height: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    font-size: 0;
   }
 
   #modalPrev {
@@ -198,12 +205,23 @@ textarea {
   #modalNext {
     right: 0.35rem;
   }
-  
+
   #modalPrev svg,
   #modalNext svg {
     display: block;
-    width: 20px;
-    height: 20px;
+    width: 1.2rem;
+    height: 1.2rem;
+    flex: 0 0 auto;
+    pointer-events: none;
+  }
+
+  #modalPrev svg path,
+  #modalNext svg path {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .relationship-line {
