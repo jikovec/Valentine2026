@@ -135,6 +135,29 @@ textarea {
   overflow: hidden;
 }
 
+.relationship-line {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+
+.relationship-line .rel-sep {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .relationship-line {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+  }
+
+  .relationship-line .rel-sep {
+    display: inline;
+  }
+}
+
 .unlock-petal {
   position: absolute;
   top: -10vh;
@@ -293,21 +316,6 @@ textarea {
     stroke-width: 2.5;
     stroke-linecap: round;
     stroke-linejoin: round;
-  }
-
-  .relationship-line {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.15rem;
-  }
-
-  .relationship-line .rel-sep {
-    display: none;
-  }
-
-  .relationship-line .for-part {
-    display: block;
   }
 
   .letter-text {

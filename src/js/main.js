@@ -541,7 +541,37 @@ function initValentinePage() {
       return;
     }
 
-    musicAudio.src = MUSIC_CONFIG.src;
+    const configuredSources = Array.isArray(MUSIC_CONFIG.sources)
+      ? MUSIC_CONFIG.sources.filter((item) => item && typeof item.src === "string")
+      : [];
+
+    const sources = configuredSources.length > 0
+      ? configuredSources
+      : [{ src: MUSIC_CONFIG.src, type: "" }];
+
+    let sourceIndex = -1;
+
+    const sourceOrder = [
+      ...sources
+        .map((source, index) => ({ source, index }))
+        .filter(({ source }) => !source.type || musicAudio.canPlayType(source.type) !== "")
+        .map(({ index }) => index),
+      ...sources
+        .map((_, index) => index)
+        .filter((index) => {
+          const source = sources[index];
+          return source.type && musicAudio.canPlayType(source.type) === "";
+        })
+    ];
+
+    function setSourceByIndex(nextIndex) {
+      if (nextIndex < 0 || nextIndex >= sources.length) return;
+      if (sourceIndex === nextIndex) return;
+
+      sourceIndex = nextIndex;
+      musicAudio.src = sources[sourceIndex].src;
+      musicAudio.load();
+    }
 
     const storedVolume = Number(safeStorageGet(localStorage, APP_CONFIG.musicVolumeStorageKey));
     const initialVolume = Number.isFinite(storedVolume)
@@ -560,14 +590,27 @@ function initValentinePage() {
     };
 
     const playMusic = async (isAuto = false) => {
-      try {
-        await musicAudio.play();
-        syncMusicButton();
-        setMusicStatus("Playing in background.");
-      } catch {
-        syncMusicButton();
-        setMusicStatus(isAuto ? "Tap Play to start music." : "Could not start playback automatically.");
+      const order = sourceOrder.length > 0 ? sourceOrder : sources.map((_, index) => index);
+      const attemptOrder = sourceIndex >= 0
+        ? [sourceIndex, ...order.filter((index) => index !== sourceIndex)]
+        : order;
+
+      for (const index of attemptOrder) {
+        setSourceByIndex(index);
+        try {
+          await musicAudio.play();
+          syncMusicButton();
+          setMusicStatus("Playing in background.");
+          return true;
+        } catch {
+        }
       }
+
+      syncMusicButton();
+      setMusicStatus(
+        "Could not play this audio format on this device. Add music.mp3 or music.m4a in assets/audio."
+      );
+      return false;
     };
 
     const pauseMusic = () => {
@@ -575,6 +618,13 @@ function initValentinePage() {
       syncMusicButton();
       setMusicStatus("Music is paused.");
     };
+
+    musicAudio.addEventListener("error", () => {
+      setMusicStatus(
+        "Audio failed to load. Add a mobile format: assets/audio/music.mp3 or assets/audio/music.m4a."
+      );
+      syncMusicButton();
+    });
 
     musicToggle.addEventListener("click", async () => {
       if (musicAudio.paused) {
@@ -592,6 +642,10 @@ function initValentinePage() {
 
     musicAudio.addEventListener("play", syncMusicButton);
     musicAudio.addEventListener("pause", syncMusicButton);
+
+    if (sourceOrder.length > 0) {
+      setSourceByIndex(sourceOrder[0]);
+    }
 
     const consent = safeStorageGet(localStorage, APP_CONFIG.musicConsentStorageKey);
 

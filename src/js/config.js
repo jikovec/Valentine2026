@@ -18,6 +18,12 @@ export const APP_CONFIG = Object.freeze({
 });
 
 export const MUSIC_CONFIG = Object.freeze({
+  sources: Object.freeze([
+    Object.freeze({ src: "./assets/audio/music.m4a", type: "audio/mp4" }),
+    Object.freeze({ src: "./assets/audio/music.mp3", type: "audio/mpeg" }),
+    Object.freeze({ src: "./assets/audio/music.ogg", type: "audio/ogg" }),
+    Object.freeze({ src: "./assets/audio/music.flac", type: "audio/flac" })
+  ]),
   src: "./assets/audio/music.flac",
   defaultVolume: 0.65,
   autoplayAfterConsent: true
