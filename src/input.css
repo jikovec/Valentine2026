@@ -1,0 +1,150 @@
+@import "tailwindcss";
+@source "./**/*.{html,js}";
+
+:root {
+  --val-green: #0e5c06;
+  --val-green-text: #4ade80;
+  --val-red: #1f0000;
+  --val-black: #000000;
+  --focus-ring: #86efac;
+}
+
+.accent-text {
+  color: var(--val-green-text);
+}
+
+:where(a, button, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.7);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  min-height: 44px;
+}
+
+
+.glass-panel {
+  background: linear-gradient(180deg, rgba(31, 0, 0, 0.55), rgba(0, 0, 0, 0.75));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(14, 92, 6, 0.35);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+}
+
+.ambient-heart {
+  position: absolute;
+  bottom: -20vh;
+  font-size: clamp(14px, 1.7vw, 24px);
+  color: rgba(14, 92, 6, 0.3);
+  animation: floatHeart var(--dur, 20s) linear infinite;
+  animation-delay: var(--delay, 0s);
+  filter: drop-shadow(0 0 10px rgba(31, 0, 0, 0.45));
+  user-select: none;
+}
+
+.unlock-out {
+  animation: unlockOut 0.45s ease forwards;
+}
+
+.unlock-in {
+  animation: unlockIn 0.65s cubic-bezier(.22, 1, .36, 1) forwards;
+}
+
+.reveal-item {
+  opacity: 0;
+  animation: revealUp 0.8s ease forwards;
+}
+
+.shake {
+  animation: shakeX 0.35s linear;
+}
+
+@keyframes floatHeart {
+  0% {
+    transform: translateY(110vh) scale(0.85);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.2;
+  }
+  80% {
+    opacity: 0.2;
+  }
+  100% {
+    transform: translateY(-15vh) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes unlockOut {
+  to {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.98);
+    filter: blur(4px);
+  }
+}
+
+@keyframes unlockIn {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shakeX {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-8px);
+  }
+  30% {
+    transform: translateX(7px);
+  }
+  45% {
+    transform: translateX(-5px);
+  }
+  60% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+
+  .ambient-heart,
+  .unlock-out,
+  .unlock-in,
+  .reveal-item,
+  .shake {
+    animation: none !important;
+    transition: none !important;
+  }
+}
