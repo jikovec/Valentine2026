@@ -1,8 +1,7 @@
 # Valentine2026
 
-Simple Valentine website with:
+Valentine website with:
 - password gate (date-based)
-- animated reveal
 - photo gallery with modal
 - Tailwind CSS
 
