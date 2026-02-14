@@ -101,10 +101,14 @@
       <p class="mt-4 max-w-3xl text-zinc-200 md:text-lg">
         Thank you for being my beloved, my future, and my favorite person. I love you.
       </p>
-      <p class="mt-2 text-sm text-zinc-400">
-        Together since <span id="sinceDate" class="text-zinc-200"></span>
-        <span class="mx-2 text-zinc-500">•</span>
-        Together for <span id="togetherFor" class="text-zinc-200"></span>
+      <p class="mt-2 text-sm text-zinc-400 relationship-line">
+        <span class="since-part">
+          Together since <span id="sinceDate" class="text-zinc-200"></span>
+        </span>
+        <span class="rel-sep mx-2 text-zinc-500" aria-hidden="true">•</span>
+        <span class="for-part">
+          Together for <span id="togetherFor" class="text-zinc-200"></span>
+        </span>
       </p>
     </section>
 
@@ -131,48 +135,54 @@
   >
     <div data-modal-close class="absolute inset-0 cursor-default" aria-hidden="true"></div>
 
-    <div class="relative z-10 w-full max-w-5xl">
-      <div class="mb-3 flex items-center justify-between gap-3">
-        <p id="modalCounter" class="text-sm text-zinc-300"></p>
-        <button
-          id="modalClose"
-          type="button"
-          class="rounded-lg border border-[#0e5c06]/40 bg-black/50 px-3 py-1.5 text-sm text-white transition hover:bg-[#1f0000]/70"
-          aria-label="Close gallery"
-        >
-          Close ✕
-        </button>
-      </div>
+    <div class="modal-shell relative z-10 mx-auto w-full max-w-5xl">
+    <div class="mb-3 flex h-10 items-center justify-between gap-3">
+      <p id="modalCounter" class="text-sm text-zinc-300"></p>
+      <button
+        id="modalClose"
+        type="button"
+        class="rounded-lg border border-[#0e5c06]/40 bg-black/50 px-3 py-1.5 text-sm text-white transition hover:bg-[#1f0000]/70"
+        aria-label="Close gallery"
+      >
+        Close ✕
+      </button>
+    </div>
 
-      <div class="relative overflow-hidden rounded-2xl border border-[#0e5c06]/40 bg-[#1f0000]/35">
-        <button
-          id="modalPrev"
-          type="button"
-          class="absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-[#0e5c06]/50 bg-black/60 px-3 py-2 text-xl text-white transition hover:bg-black/80"
-          aria-label="Previous photo"
-        >
-          ‹
-        </button>
+    <div class="modal-stage relative overflow-hidden rounded-2xl border border-[#0e5c06]/40 bg-[#1f0000]/35">
+      <button
+        id="modalPrev"
+        type="button"
+        class="absolute left-2 top-1/2 z-20 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full border border-[#0e5c06]/50 bg-black/60 text-white transition hover:bg-black/80"
+        aria-label="Previous photo"
+      >
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 6l-6 6 6 6" />
+        </svg>
+      </button>
 
+      <div class="modal-media-frame">
         <img
           id="modalImage"
           src=""
           alt=""
-          class="mx-auto max-h-[56vh] w-auto max-w-full object-contain md:max-h-[72vh]"
+          class="h-auto w-auto max-h-full max-w-full object-contain"
         />
-
-        <button
-          id="modalNext"
-          type="button"
-          class="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-[#0e5c06]/50 bg-black/60 px-3 py-2 text-xl text-white transition hover:bg-black/80"
-          aria-label="Next photo"
-        >
-          ›
-        </button>
       </div>
 
-      <p id="modalCaption" class="mt-3 text-sm text-zinc-200 md:text-base"></p>
+      <button
+        id="modalNext"
+        type="button"
+        class="absolute right-2 top-1/2 z-20 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full border border-[#0e5c06]/50 bg-black/60 text-white transition hover:bg-black/80"
+        aria-label="Next photo"
+      >
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      </button>
     </div>
+
+    <p id="modalCaption" class="mt-3 h-14 overflow-y-auto text-sm leading-6 text-zinc-200 md:h-12 md:text-base"></p>
+  </div>
   </div>
 
   <script type="module" src="./js/main.js"></script>
