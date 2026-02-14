@@ -198,6 +198,13 @@ textarea {
   #modalNext {
     right: 0.35rem;
   }
+  
+  #modalPrev svg,
+  #modalNext svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
 
   .relationship-line {
     display: flex;
