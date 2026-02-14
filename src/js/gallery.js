@@ -184,14 +184,18 @@ export function initGallery({
     isOpen = true;
     modal.setAttribute("aria-hidden", "false");
     modal.classList.remove("hidden");
-    document.body.classList.add("overflow-hidden");
+    lockPageScroll();
 
     requestAnimationFrame(() => {
       modal.classList.remove("opacity-0");
       modal.classList.add("opacity-100");
     });
 
-    closeBtn.focus();
+    try {
+      closeBtn.focus({ preventScroll: true });
+    } catch {
+      closeBtn.focus();
+    }
   }
 
   function closeModal() {
@@ -201,13 +205,17 @@ export function initGallery({
     modal.classList.remove("opacity-100");
     modal.classList.add("opacity-0");
     modal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("overflow-hidden");
+    unlockPageScroll();
 
     closingTimer = setTimeout(() => {
       modal.classList.add("hidden");
       closingTimer = null;
       if (previousFocusedElement && typeof previousFocusedElement.focus === "function") {
-        previousFocusedElement.focus();
+        try {
+          previousFocusedElement.focus({ preventScroll: true });
+        } catch {
+          previousFocusedElement.focus();
+        }
       }
     }, 260);
   }
@@ -286,6 +294,30 @@ export function initGallery({
       event.preventDefault();
       first.focus();
     }
+  }
+
+  let lockedScrollY = 0;
+
+  function lockPageScroll() {
+    lockedScrollY = window.scrollY || window.pageYOffset || 0;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${lockedScrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+  }
+
+  function unlockPageScroll() {
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    window.scrollTo(0, lockedScrollY);
   }
 
   const onPrevClick = () => setModalContent(currentIndex - 1);
