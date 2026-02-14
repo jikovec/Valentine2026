@@ -18,6 +18,12 @@ export const APP_CONFIG = Object.freeze({
 });
 
 export const MUSIC_CONFIG = Object.freeze({
+  sources: Object.freeze([
+    Object.freeze({ src: "./assets/audio/music.m4a", type: "audio/mp4" }),
+    Object.freeze({ src: "./assets/audio/music.mp3", type: "audio/mpeg" }),
+    Object.freeze({ src: "./assets/audio/music.ogg", type: "audio/ogg" }),
+    Object.freeze({ src: "./assets/audio/music.flac", type: "audio/flac" })
+  ]),
   src: "./assets/audio/music.flac",
   defaultVolume: 0.65,
   autoplayAfterConsent: true
@@ -96,7 +102,7 @@ export const GALLERY_ITEMS = Object.freeze([
     caption: "My family around us, but my eyes were still looking at you.",
     date: "2025-12-31",
     location: "New year's eve",
-    tags: ["family", "portrait"]
+    tags: ["family", "portrait", "night"]
   },
   {
     src: "./assets/photos/photo-02.jpg",
@@ -104,7 +110,7 @@ export const GALLERY_ITEMS = Object.freeze([
     caption: "Cold streets, but you warmed me up with your presence (and kiss 👉👈).",
     date: "2026-01-24",
     location: "City center",
-    tags: ["night", "kiss", "selfie", "outdoor"]
+    tags: ["kiss", "selfie", "outdoor"]
   },
   {
     src: "./assets/photos/photo-03.jpg",
@@ -112,7 +118,7 @@ export const GALLERY_ITEMS = Object.freeze([
     caption: "Being able to be myself with you is the best feeling in the world.",
     date: "2026-01-24",
     location: "Before concert",
-    tags: ["selfie", "close-up", "outdoor"]
+    tags: ["selfie", "close-up", "outdoor", "funny"]
   },
   {
     src: "./assets/photos/photo-04.jpg",
@@ -120,7 +126,7 @@ export const GALLERY_ITEMS = Object.freeze([
     caption: "ZHROMAŽDIŠTE!! (Gathering place for all my favorite things, meaning you.)",
     date: "2026-01-24",
     location: "ZHROMAŽDIŠTE",
-    tags: ["concert", "outdoor"]
+    tags: ["outdoor", "funny", "art"]
   },
   {
     src: "./assets/photos/photo-05.jpg",
@@ -152,7 +158,7 @@ export const GALLERY_ITEMS = Object.freeze([
     caption: "Even our weirdest angles are my favorite memories.",
     date: "2026-01-17",
     location: "At your house",
-    tags: ["selfie", "funny"]
+    tags: ["selfie", "funny", "close-up"]
   },
   {
     src: "./assets/photos/photo-09.jpg",
@@ -192,7 +198,7 @@ export const GALLERY_ITEMS = Object.freeze([
     caption: "Francis.",
     date: "2024-09-03",
     location: "Francis",
-    tags: ["pet", "funny"]
+    tags: ["pet", "art"]
   },
   {
     src: "./assets/photos/photo-14.jpg",
@@ -208,7 +214,7 @@ export const GALLERY_ITEMS = Object.freeze([
     caption: "I'm the bunny and you're the kitten.",
     date: "2025-05-03",
     location: "Sticker",
-    tags: ["cute", "art"]
+    tags: ["art", "pet"]
   }
 ]);
 
